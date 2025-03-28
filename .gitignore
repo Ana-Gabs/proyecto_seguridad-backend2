@@ -1,6 +1,5 @@
 # Ignorar node_modules
 node_modules/
-env
 .env
 package-lock.json
 serviceAccountKey.json
