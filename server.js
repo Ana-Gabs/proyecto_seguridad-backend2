@@ -3,13 +3,16 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const userRoutes = require("./src/routes/user_routes");
-const { db } = require("./src/config/firebase"); 
+const { db } = require("./src/config/firebase");
+const logMiddleware = require('./src/middlewares/logMiddleware'); 
 
 const app = express();  
 
 // variables de entorno
 const PORT = process.env.PORT;
 const IP_WEBSERVICE_URL = process.env.IP_WEBSERVICE_URL;
+
+app.use(logMiddleware);
 
 // Middlewares
 app.use(express.json());
