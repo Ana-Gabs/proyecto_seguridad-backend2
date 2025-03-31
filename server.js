@@ -21,7 +21,7 @@ app.use(cors());
 // rutas
 app.use("/users", userRoutes);
 
-// Verificar conexión con Firestore antes de iniciar el servidor
+// Verificar la conexion con firebase antes de iniciar el servidor
 db.listCollections()
   .then(() => {
     console.log("Conexión con Firestore establecida correctamente.");
