@@ -9,7 +9,7 @@ const { db } = require("../config/firebase");
  */
 const logAction = async (req, email, action) => {
   try {
-    await db.collection("logs").add({
+    await db.collection("logs2").add({
       email,
       action,
       timestamp: new Date(),
