@@ -9,6 +9,10 @@ require("dotenv").config();
 // Obtener información del servidor y alumno
 exports.getInfo = async (req, res) => {
   try {
+    const randomChance = Math.random();
+    if (randomChance < 0.3) {
+      throw new Error("Simulación de error");
+    }
     const info = {
       node_version: process.version,
       student: {
@@ -16,10 +20,11 @@ exports.getInfo = async (req, res) => {
         group: "Grupo IDGS11"
       }
     };
-    await logAction(req, "anonymous", "getInfo"); 
+    await logAction(req, "anonymous", "getInfo");
     res.json(info);
   } catch (error) {
     console.error("Error al obtener info:", error);
+    await logAction(req, "anonymous", "getInfo-error");
     res.status(500).json({ error: "Error interno del servidor" });
   }
 };
