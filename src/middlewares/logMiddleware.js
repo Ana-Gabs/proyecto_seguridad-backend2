@@ -1,3 +1,4 @@
+// ./middleware/logMiddlewarejs
 const logger = require('../logs/logger');
 
 const logMiddleware = (req, res, next) => {

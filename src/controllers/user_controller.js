@@ -1,127 +1,128 @@
 // ./controllers/user_controller.js
+const rateLimit = require("express-rate-limit");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const speakeasy = require("speakeasy");
 const { db } = require("../config/firebase");
 require("dotenv").config();
 
-/***** Login del usuario *****/
-exports.login = async (req, res) => {
-  try {
-    const { emailOrUsername, password } = req.body;
+// Rate Limit: 100 requests cada 10 minutos
+const limiter = rateLimit({
+  windowMs: 10 * 60 * 1000, 
+  max: 100,
+  message: "Demasiadas peticiones, intenta más tarde."
+});
 
-    // Validar que los campos no estén vacíos
-    if (!emailOrUsername || !password) {
-      return res.status(400).json({
-        statusCode: 400,
-        intDataMessage: [{ credentials: "Usuario y contraseña son requeridos" }],
-      });
+// Obtener información del servidor y alumno
+exports.getInfo = (req, res) => {
+  res.json({
+    node_version: process.version,
+    student: {
+      name: "Ana Gabriela Contreras Jiménez",
+      group: "Grupo IDGS11"
     }
-
-    // Buscar usuario por email
-    let userSnap = await db.collection("users").where("email", "==", emailOrUsername).get();
-
-    // Si no se encontró por email, buscar por username
-    if (userSnap.empty) {
-      userSnap = await db.collection("users").where("username", "==", emailOrUsername).get();
-    }
-
-    // Si sigue vacío, credenciales incorrectas
-    if (userSnap.empty) {
-      return res.status(401).json({
-        statusCode: 401,
-        intDataMessage: [{ credentials: "Credenciales incorrectas" }],
-      });
-    }
-
-    // Obtener los datos del usuario
-    const userDoc = userSnap.docs[0];
-    const userData = userDoc.data();
-
-    // Verificar contraseña
-    const isMatch = await bcrypt.compare(password, userData.password);
-    if (!isMatch) {
-      return res.status(401).json({
-        statusCode: 401,
-        intDataMessage: [{ credentials: "Credenciales incorrectas" }],
-      });
-    }
-
-    // Generar token con username, rol y permisos
-    const token = jwt.sign(
-      { username: userData.username,},
-      process.env.JWT_SECRET,
-      { expiresIn: "20m" } // Expira en 1 hora
-    );
-
-    // Guardar fecha de último login
-    const lastLoginDate = new Date();
-    await userDoc.ref.update({ last_login: lastLoginDate });
-
-    // Enviar respuesta con token y datos del usuario
-    res.status(200).json({
-      statusCode: 200,
-      token,
-      /*user: {
-        email: userData.email,
-        username: userData.username,
-        rol: userData.rol,
-        permissions,
-        last_login: lastLoginDate,
-      },*/
-    });
-
-  } catch (error) {
-    console.error("Error en login:", error);
-    res.status(500).json({ error: "Error al iniciar sesión" });
-  }
+  });
 };
 
-/**** Registro de usuario ****/
+// Registro de usuario
 exports.register = async (req, res) => {
   try {
-    const { email, username, password, rol } = req.body;
-
-    // Verificar si el usuario ya existe
-    const userRef = db.collection("users").where("email", "==", email);
-    const userSnap = await userRef.get();
-
-    if (!userSnap.empty) {
-      return res.status(400).json({ error: "El usuario ya existe" });
+    const { email, username, password } = req.body;
+    if (!email || !username || !password) {
+      return res.status(400).json({ error: "Todos los campos son obligatorios." });
     }
-
-    // Encriptar la contraseña
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Fecha actual para registro
-    const dateRegister = new Date();
-
+    if (!email.match(/^[^@\s]+@[^@\s]+\.[^@\s]+$/)) {
+      return res.status(400).json({ error: "Email inválido." });
+    }
     
-    // Insertar usuario en Firebase
-    const newUserRef = db.collection("users").doc();
-    await newUserRef.set({
+    const userSnap = await db.collection("users").where("email", "==", email).get();
+    if (!userSnap.empty) {
+      return res.status(400).json({ error: "El usuario ya existe." });
+    }
+    
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const secret = speakeasy.generateSecret();
+    await db.collection("users").doc().set({
       email,
       username,
       password: hashedPassword,
-      date_register: dateRegister,
-      last_login: null,
+      mfa_secret: secret.base32,
+      date_register: new Date(),
+      last_login: null
     });
-
-    res.status(201).json({ message: "Usuario registrado con éxito" });
-
+    
+    res.status(201).json({ message: "Usuario registrado con éxito.", mfa_secret: secret.otpauth_url });
   } catch (error) {
-    console.error("Error en registro:", error);
-    res.status(500).json({ error: "Error al registrar usuario" });
+    res.status(500).json({ error: "Error en el registro." });
   }
 };
 
-/**** Listar todos los usuarios ****/
-exports.getUsers = async (req, res) => {
+// Login con MFA
+exports.login = async (req, res) => {
   try {
-    const usersSnap = await db.collection("users").get();
-    const users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-    res.status(200).json({ statusCode: 200, users });
+    const { emailOrUsername, password } = req.body;
+    let userSnap = await db.collection("users").where("email", "==", emailOrUsername).get();
+    if (userSnap.empty) {
+      userSnap = await db.collection("users").where("username", "==", emailOrUsername).get();
+    }
+    if (userSnap.empty) return res.status(401).json({ error: "Credenciales incorrectas." });
+    
+    const userDoc = userSnap.docs[0];
+    const userData = userDoc.data();
+    if (!await bcrypt.compare(password, userData.password)) {
+      return res.status(401).json({ error: "Credenciales incorrectas." });
+    }
+    
+    if (userData.mfaEnabled) {
+      return res.json({ requiresMFA: true, email: userData.email });
+    }
+    
+    const token = jwt.sign({ email: userData.email }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    await userDoc.ref.update({ last_login: new Date() });
+    await db.collection("logs").add({
+      email: userData.email,
+      action: "login",
+      timestamp: new Date(),
+      ip: req.ip,
+      userAgent: req.headers["user-agent"]
+    });
+    res.status(200).json({ token });
   } catch (error) {
-    res.status(500).json({ error: "Error al obtener usuarios" });
+    console.error("Error en login:", error);
+    res.status(500).json({ error: "Error en el login." });
+  }
+};
+
+// Verificar OTP
+exports.verifyOtp = async (req, res) => {
+  try {
+    const { email, token } = req.body;
+    const userSnap = await db.collection("users").where("email", "==", email).get();
+    if (userSnap.empty) return res.status(401).json({ message: "Usuario no encontrado" });
+    
+    const userData = userSnap.docs[0].data();
+    if (!userData.mfaEnabled) {
+      return res.status(400).json({ message: "El usuario no tiene 2FA habilitado" });
+    }
+    const isVerified = speakeasy.totp.verify({
+      secret: userData.mfa_secret,
+      encoding: "base32",
+      token,
+      window: 1
+    });
+    if (!isVerified) return res.status(401).json({ success: false, message: "Código OTP inválido o expirado" });
+
+    const jwtToken = jwt.sign({ email: userData.email }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    await db.collection("logs").add({
+      email: userData.email,
+      action: "verify-otp",
+      timestamp: new Date(),
+      ip: req.ip,
+      userAgent: req.headers["user-agent"]
+    });
+    res.json({ success: true, token: jwtToken });
+  } catch (error) {
+    console.error("Error al verificar OTP:", error);
+    res.status(500).json({ message: "Error interno del servidor" });
   }
 };
