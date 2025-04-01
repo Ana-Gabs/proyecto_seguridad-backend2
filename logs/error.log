@@ -1,0 +1,5 @@
+{"ip":"::ffff:127.0.0.1","level":"error","message":"Request log","method":"GET","responseTime":"6ms","status":404,"timestamp":"2025-04-01T18:02:24.566Z","url":"/api/info","userAgent":"Thunder Client (https://www.thunderclient.com)"}
+{"ip":"::ffff:127.0.0.1","level":"error","message":"Request log","method":"GET","responseTime":"1ms","status":404,"timestamp":"2025-04-01T18:02:27.012Z","url":"/api/info","userAgent":"Thunder Client (https://www.thunderclient.com)"}
+{"ip":"::ffff:127.0.0.1","level":"error","message":"Request log","method":"GET","responseTime":"2ms","status":404,"timestamp":"2025-04-01T18:02:35.844Z","url":"/user/info","userAgent":"Thunder Client (https://www.thunderclient.com)"}
+{"ip":"::ffff:127.0.0.1","level":"error","message":"Request log","method":"GET","responseTime":"1ms","status":404,"timestamp":"2025-04-01T18:02:36.937Z","url":"/user/info","userAgent":"Thunder Client (https://www.thunderclient.com)"}
+{"ip":"::ffff:127.0.0.1","level":"error","message":"Request log","method":"GET","responseTime":"4ms","status":403,"timestamp":"2025-04-01T18:03:43.957Z","url":"/info","userAgent":"Thunder Client (https://www.thunderclient.com)"}

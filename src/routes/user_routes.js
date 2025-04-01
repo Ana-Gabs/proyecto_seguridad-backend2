@@ -9,7 +9,8 @@ const router = express.Router();
 // Rutas de autenticación
 router.post("/login", limiter, login);
 router.post("/register", limiter, register);
-router.get("/info", verifyToken, getInfo);
+router.get("/info", getInfo);
+//router.get("/info", verifyToken, getInfo);
 router.post("/verify-otp", limiter, verifyOtp);
 
 
