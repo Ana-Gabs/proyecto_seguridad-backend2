@@ -3,6 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const userRoutes = require("./src/routes/user_routes");
+const logsRoutes = require("./src/routes/logs_routes");
 const { db } = require("./src/config/firebase");
 const logMiddleware = require('./src/middlewares/logMiddleware'); 
 
@@ -20,6 +21,7 @@ app.use(cors());
 
 // rutas
 app.use("/users", userRoutes);
+app.use('/logs', logsRoutes);
 
 // Verificar la conexion con firebase antes de iniciar el servidor
 db.listCollections()
