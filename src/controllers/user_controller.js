@@ -33,29 +33,51 @@ exports.getInfo = async (req, res) => {
 exports.register = async (req, res) => {
   try {
     const { email, username, password } = req.body;
+
+    // Validación de campos vacíos
     if (!email || !username || !password) {
       return res.status(400).json({ error: "Todos los campos son obligatorios." });
     }
 
+    // Validación del formato del email
     if (!email.match(/^[^@\s]+@[^@\s]+\.[^@\s]+$/)) {
       return res.status(400).json({ error: "Email inválido." });
     }
 
+    // Verificar si el email ya existe en la base de datos
     const userSnap = await db.collection("users").where("email", "==", email).get();
     if (!userSnap.empty) {
       return res.status(400).json({ error: "El usuario ya existe." });
     }
 
+    // Hashear la contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Generar el secreto para MFA
     const secret = speakeasy.generateSecret();
 
-    await logAction(req, userData.email, "register");
+    // Crear el nuevo usuario en la base de datos
+    await db.collection("users").doc().set({
+      email,
+      username,
+      password: hashedPassword,
+      mfa_secret: secret.base32,
+      date_register: new Date(),
+      last_login: null
+    });
 
+    // Registrar la acción en los logs, usando el email proporcionado
+    await logAction(req, email, "register");
+
+    // Responder con éxito
     res.status(201).json({ message: "Usuario registrado con éxito.", mfa_secret: secret.otpauth_url });
+
   } catch (error) {
-    res.status(500).json({ error: "Error en el registro." });
+    console.error("Error en el registro:", error);  // Log detallado en consola
+    res.status(500).json({ error: "Error en el registro." });  // Mensaje genérico para el cliente
   }
 };
+
 
 // Login con MFA
 exports.login = async (req, res) => {
