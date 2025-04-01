@@ -3,17 +3,25 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const speakeasy = require("speakeasy");
 const { db } = require("../config/firebase");
+const { logAction } = require("../utils/logger");
 require("dotenv").config();
 
 // Obtener información del servidor y alumno
-exports.getInfo = (req, res) => {
-  res.json({
-    node_version: process.version,
-    student: {
-      name: "Ana Gabriela Contreras Jiménez",
-      group: "Grupo IDGS11"
-    }
-  });
+exports.getInfo = async (req, res) => {
+  try {
+    const info = {
+      node_version: process.version,
+      student: {
+        name: "Ana Gabriela Contreras Jiménez",
+        group: "Grupo IDGS11"
+      }
+    };
+    await logAction(req, "anonymous", "getInfo"); 
+    res.json(info);
+  } catch (error) {
+    console.error("Error al obtener info:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
 };
 
 // Registro de usuario
@@ -36,14 +44,7 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const secret = speakeasy.generateSecret();
 
-    await db.collection("users").doc().set({
-      email,
-      username,
-      password: hashedPassword,
-      mfa_secret: secret.base32,
-      date_register: new Date(),
-      last_login: null
-    });
+    await logAction(req, userData.email, "register");
 
     res.status(201).json({ message: "Usuario registrado con éxito.", mfa_secret: secret.otpauth_url });
   } catch (error) {
@@ -77,13 +78,7 @@ exports.login = async (req, res) => {
     const token = jwt.sign({ email: userData.email }, process.env.JWT_SECRET, { expiresIn: "1h" });
     await userDoc.ref.update({ last_login: new Date() });
 
-    await db.collection("logs").add({
-      email: userData.email,
-      action: "login",
-      timestamp: new Date(),
-      ip: req.ip,
-      userAgent: req.headers["user-agent"]
-    });
+    await logAction(req, userData.email, "login");
 
     res.status(200).json({ token });
   } catch (error) {
@@ -116,13 +111,7 @@ exports.verifyOtp = async (req, res) => {
 
     const jwtToken = jwt.sign({ email: userData.email }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
-    await db.collection("logs").add({
-      email: userData.email,
-      action: "verify-otp",
-      timestamp: new Date(),
-      ip: req.ip,
-      userAgent: req.headers["user-agent"]
-    });
+    await logAction(req, userData.email, "verifyOtp");
 
     res.json({ success: true, token: jwtToken });
   } catch (error) {

@@ -10,7 +10,8 @@ const router = express.Router();
 router.post("/login", limiter, login);
 router.post("/register", limiter, register);
 router.get("/info", verifyToken, getInfo);
-router.post("/verify-otp", verifyOtp);
+router.post("/verify-otp", limiter, verifyOtp);
+
 
 module.exports = router;
 
