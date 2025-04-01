@@ -1,4 +1,4 @@
-// ./routes/logs_routes.js
+// ./routes/logsss_routes.js
 const express = require('express');
 const { getLogsServer1, getLogsServer2 } = require('../controllers/logs_controller');
 const limiter = require("../middlewares/rateLimitMiddleware");

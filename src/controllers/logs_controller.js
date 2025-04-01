@@ -1,4 +1,4 @@
-// ./controllers/logs_controller.js
+// ./controllers/logsss_controller.js
 const { db } = require('../config/firebase');
 
 
