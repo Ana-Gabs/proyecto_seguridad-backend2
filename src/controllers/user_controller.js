@@ -117,15 +117,27 @@ exports.login = async (req, res) => {
 // Verificar OTP
 exports.verifyOtp = async (req, res) => {
   try {
+    //console.log("Datos recibidos en verifyOtp:", req.body);
+
     const { email, token } = req.body;
+    if (!email || !token) {
+      return res.status(400).json({ message: "Faltan datos en la solicitud" });
+    }
+
     const userSnap = await db.collection("users").where("email", "==", email).get();
 
-    if (userSnap.empty) return res.status(401).json({ message: "Usuario no encontrado" });
+    if (userSnap.empty) {
+      return res.status(401).json({ message: "Usuario no encontrado" });
+    }
 
     const userData = userSnap.docs[0].data();
-    if (!userData.mfaEnabled) {
+    //console.log("Datos del usuario en la BD:", userData);
+
+    if (!userData.mfa_secret) {
       return res.status(400).json({ message: "El usuario no tiene 2FA habilitado" });
     }
+
+    //console.log("mfa_secret del usuario:", userData.mfa_secret);
 
     const isVerified = speakeasy.totp.verify({
       secret: userData.mfa_secret,
@@ -134,11 +146,15 @@ exports.verifyOtp = async (req, res) => {
       window: 1
     });
 
-    if (!isVerified) return res.status(401).json({ success: false, message: "Código OTP inválido o expirado" });
+    if (!isVerified) {
+      console.log("Código OTP inválido");
+      return res.status(401).json({ success: false, message: "Código OTP inválido o expirado" });
+    }
+
+    //console.log("OTP verificado correctamente");
 
     const jwtToken = jwt.sign({ email: userData.email }, process.env.JWT_SECRET, { expiresIn: "1h" });
-
-    await logAction(req, userData.email, "verifyOtp");
+    //console.log("JWT generado:", jwtToken);
 
     res.json({ success: true, token: jwtToken });
   } catch (error) {
