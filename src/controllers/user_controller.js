@@ -34,7 +34,6 @@ exports.register = async (req, res) => {
   try {
     const { email, username, password } = req.body;
 
-    // Validación de campos vacíos
     if (!email || !username || !password) {
       return res.status(400).json({ error: "Todos los campos son obligatorios." });
     }
@@ -61,7 +60,8 @@ exports.register = async (req, res) => {
       email,
       username,
       password: hashedPassword,
-      mfa_secret: secret.base32,
+      mfa_secret: secret.base32,  // El secreto MFA
+      mfaEnabled: true,           // Aquí indicamos que MFA está habilitado
       date_register: new Date(),
       last_login: null
     });
@@ -77,7 +77,6 @@ exports.register = async (req, res) => {
     res.status(500).json({ error: "Error en el registro." });  // Mensaje genérico para el cliente
   }
 };
-
 
 // Login con MFA
 exports.login = async (req, res) => {
