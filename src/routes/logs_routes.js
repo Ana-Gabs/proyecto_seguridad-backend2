@@ -1,7 +1,6 @@
 // ./routes/logs_routes.js
 const express = require('express');
 const { getLogsByLevel, getLogsByResponseTime, getLogsByStatus } = require('../controllers/logs_controller');
-const limiter = require("../middlewares/rateLimitMiddleware");
 
 const router = express.Router();
 
