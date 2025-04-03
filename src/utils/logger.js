@@ -23,7 +23,7 @@ const logAction = async (req, res, email, action, logLevel = "info") => {
       const dynamicLogLevel = statusCode >= 400 ? "error" : "info"; // Si el código es >= 400, es un error
 
       // Aquí agregamos los logs a Firestore con todos los detalles adicionales.
-      await db.collection("logs").add({
+      await db.collection("logs2").add({
         email,
         action,
         logLevel: logLevel || dynamicLogLevel,  // Nivel de log
