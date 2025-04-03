@@ -6,13 +6,14 @@ const { db } = require("../config/firebase");
 const { logAction } = require("../utils/logger");
 require("dotenv").config();
 
-// Obtener información del servidor y alumno
+// get para la info del usuario
 exports.getInfo = async (req, res) => {
   try {
     const randomChance = Math.random();
     if (randomChance < 0.3) {
       throw new Error("Simulación de error");
     }
+
     const info = {
       node_version: process.version,
       student: {
@@ -20,11 +21,17 @@ exports.getInfo = async (req, res) => {
         group: "Grupo IDGS11"
       }
     };
-    await logAction(req, "anonymous", "getInfo");
+
+    // Llamada para registrar el log con nivel "info"
+    await logAction(req, res, "anonymous", "getInfo", "info");
+
     res.json(info);
   } catch (error) {
     console.error("Error al obtener info:", error);
-    await logAction(req, "anonymous", "getInfo-error");
+
+    // Llamada para registrar el log con nivel "error"
+    await logAction(req, res, "anonymous", "getInfo-error", "error");
+
     res.status(500).json({ error: "Error interno del servidor" });
   }
 };
@@ -67,13 +74,17 @@ exports.register = async (req, res) => {
     });
 
     // Registrar la acción en los logs, usando el email proporcionado
-    await logAction(req, email, "register");
+    await logAction(req, email, "register", "info");
 
     // Responder con éxito
     res.status(201).json({ message: "Usuario registrado con éxito.", mfa_secret: secret.otpauth_url });
 
   } catch (error) {
     console.error("Error en el registro:", error);  // Log detallado en consola
+
+    // Registrar el error de registro
+    await logAction(req, "anonymous", "register-error", "error");
+
     res.status(500).json({ error: "Error en el registro." });  // Mensaje genérico para el cliente
   }
 };
@@ -98,17 +109,23 @@ exports.login = async (req, res) => {
     }
 
     if (userData.mfaEnabled) {
+      await logAction(req, userData.email, "login-mfa-required", "info");
       return res.json({ requiresMFA: true, email: userData.email });
     }
 
     const token = jwt.sign({ email: userData.email }, process.env.JWT_SECRET, { expiresIn: "1h" });
     await userDoc.ref.update({ last_login: new Date() });
 
-    await logAction(req, userData.email, "login");
+    // Registrar log de login exitoso
+    await logAction(req, userData.email, "login", "info");
 
     res.status(200).json({ token });
   } catch (error) {
     console.error("Error en login:", error);
+
+    // Registrar log de error en login
+    await logAction(req, "anonymous", "login-error", "error");
+
     res.status(500).json({ error: "Error en el login." });
   }
 };
@@ -116,7 +133,7 @@ exports.login = async (req, res) => {
 // Verificar OTP
 exports.verifyOtp = async (req, res) => {
   try {
-    //console.log("Datos recibidos en verifyOtp:", req.body);
+    console.log("Datos recibidos en verifyOtp:", req.body);
 
     const { email, token } = req.body;
     if (!email || !token) {
@@ -130,13 +147,13 @@ exports.verifyOtp = async (req, res) => {
     }
 
     const userData = userSnap.docs[0].data();
-    //console.log("Datos del usuario en la BD:", userData);
+    console.log("Datos del usuario en la BD:", userData);
 
     if (!userData.mfa_secret) {
       return res.status(400).json({ message: "El usuario no tiene 2FA habilitado" });
     }
 
-    //console.log("mfa_secret del usuario:", userData.mfa_secret);
+    console.log("mfa_secret del usuario:", userData.mfa_secret);
 
     const isVerified = speakeasy.totp.verify({
       secret: userData.mfa_secret,
@@ -147,17 +164,28 @@ exports.verifyOtp = async (req, res) => {
 
     if (!isVerified) {
       console.log("Código OTP inválido");
+
+      // Registrar el intento fallido de verificación OTP
+      await logAction(req, email, "verifyOtp-error", "error");
+
       return res.status(401).json({ success: false, message: "Código OTP inválido o expirado" });
     }
 
-    //console.log("OTP verificado correctamente");
+    console.log("OTP verificado correctamente");
 
     const jwtToken = jwt.sign({ email: userData.email }, process.env.JWT_SECRET, { expiresIn: "1h" });
-    //console.log("JWT generado:", jwtToken);
+    console.log("JWT generado:", jwtToken);
+
+    // Registrar la acción de verificación OTP
+    await logAction(req, email, "verifyOtp-success", "info");
 
     res.json({ success: true, token: jwtToken });
   } catch (error) {
     console.error("Error al verificar OTP:", error);
+
+    // Registrar el error al verificar OTP
+    await logAction(req, "anonymous", "verifyOtp-error", "error");
+
     res.status(500).json({ message: "Error interno del servidor" });
   }
 };
