@@ -4,7 +4,7 @@ const { logAction } = require("../utils/logger");
 
 exports.getLogsByLevel = async (req, res) => {
   try {
-    const logsSnap = await db.collection('logs').get();
+    const logsSnap = await db.collection('logs2').get();
     const logs = logsSnap.docs.map(doc => doc.data());
 
     // Agrupar los logs por nivel (logLevel)
@@ -30,7 +30,7 @@ exports.getLogsByLevel = async (req, res) => {
 
 exports.getLogsByResponseTime = async (req, res) => {
   try {
-    const logsSnap = await db.collection('logs').get(); // Obtener todos los logs de Firestore
+    const logsSnap = await db.collection('logs2').get(); // Obtener todos los logs de Firestore
     const logs = logsSnap.docs.map(doc => doc.data()); 
 
     // Reducir los logs para contar cuántos caen en cada intervalo de tiempo
@@ -59,7 +59,7 @@ exports.getLogsByResponseTime = async (req, res) => {
 
 exports.getLogsByStatus = async (req, res) => {
   try {
-    const logsSnap = await db.collection('logs').get();
+    const logsSnap = await db.collection('logs2').get();
     const logs = logsSnap.docs.map(doc => doc.data());
 
     // Agrupar los logs por código de estado (status)
