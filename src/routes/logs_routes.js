@@ -1,11 +1,16 @@
-// ./routes/logsss_routes.js
+// ./routes/logs_routes.js
 const express = require('express');
-const { getLogsServer1, getLogsServer2 } = require('../controllers/logs_controller');
+const { getLogsByLevel, getLogsByResponseTime, getLogsByStatus } = require('../controllers/logs_controller');
+const limiter = require("../middlewares/rateLimitMiddleware");
 
 const router = express.Router();
 
 // Rutas para obtener logs
-router.get('/server1' ,getLogsServer1);  
-router.get('/server2',getLogsServer2);  
+//router.get('/level', limiter,getLogsByLevel);  
+router.get('/level',getLogsByLevel);  
+//router.get('/time', limiter,getLogsByResponseTime);  
+router.get('/time', getLogsByResponseTime);  
+//router.get('/status', limiter,getLogsByStatus);  
+router.get('/status', getLogsByStatus);  
 
 module.exports = router;
